@@ -3,20 +3,40 @@
 /* appearance */
 static const unsigned int borderpx  = 1;        /* border pixel of windows */
 static const unsigned int snap      = 32;       /* snap pixel */
+static const unsigned int gappih    = 10;       /* horiz inner gap between windows */
+static const unsigned int gappiv    = 10;       /* vert inner gap between windows */
+static const unsigned int gappoh    = 10;       /* horiz outer gap between windows and screen edge */
+static const unsigned int gappov    = 10;       /* vert outer gap between windows and screen edge */
+static const int smartgaps          = 0;        /* 1 means no outer gap when there is only one window */
 static const int showbar            = 1;        /* 0 means no bar */
 static const int topbar             = 1;        /* 0 means bottom bar */
 static const char *fonts[]          = { "FiraCode Nerd Font:size=13" };
 static const char dmenufont[]       = "FiraCode Nerd Font:size=13";
-static const char col_gray1[]       = "#222222";
-static const char col_gray2[]       = "#444444";
-static const char col_gray3[]       = "#bbbbbb";
-static const char col_gray4[]       = "#eeeeee";
-static const char col_cyan[]        = "#005577";
-static const char *colors[][3]      = {
+static const char col_gray1[]            = "#1f2227";
+static const char col_gray2[]            = "#abb2bf";
+static const char col_gray3[]            = "#abb2bf";
+static const char col_gray4[]            = "#abb2bf";
+static const char col_cyan[]             = "#88c0d0";
+static const char col_purple[]           = "#B48EAD";
+static const char col_red[]              = "#d54646";
+static const char col_green[]            = "#23d18b";
+static const char col_yellow[]           = "#d7ba7d";
+static const char col_blue[]             = "#81a1c1";
+static const char col_info_blue[]        = "#4fc1ff";
+
+static const char *colors[][3] = {
 	/*               fg         bg         border   */
-	[SchemeNorm] = { col_gray3, col_gray1, col_gray2 },
-	[SchemeSel]  = { col_gray4, col_cyan,  col_cyan  },
+	[SchemeNorm]     = { col_gray4, col_gray1, col_gray2 },
+	[SchemeSel]      = { col_gray4, col_blue,  col_blue  },
+	[SchemeStatus]   = { col_gray4, col_gray1,  "#000000"  }, // Statusbar right {text,background,not used but cannot be empty}
+
+	[SchemeTagsSel]  = { col_info_blue, col_gray1,  "#000000"  }, // Tagbar left selected {text,background,not used but cannot be empty}
+  [SchemeTagsNorm] = { col_gray3, col_gray1,  "#000000"  }, // Tagbar left unselected {text,background,not used but cannot be empty}
+
+  [SchemeInfoSel]  = { col_yellow, col_gray1,  "#000000"  }, // infobar middle  selected {text,background,not used but cannot be empty}
+  [SchemeInfoNorm] = { col_yellow, col_gray1,  "#000000"  }, // infobar middle  unselected {text,background,not used but cannot be empty}
 };
+
 
 /* tagging */
 static const char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
@@ -46,6 +66,7 @@ static const Layout layouts[] = {
 
 /* key definitions */
 #define MODKEY Mod4Mask
+#define MODKEY_ALT Mod1Mask
 #define TAGKEYS(KEY,TAG) \
 	{ MODKEY,                       KEY,      view,           {.ui = 1 << TAG} }, \
 	{ MODKEY|ControlMask,           KEY,      toggleview,     {.ui = 1 << TAG} }, \
@@ -62,7 +83,10 @@ static const char *termcmd[]  = { "alacritty", NULL };
 static const char *browsercmd[]  = { "firefox", NULL };
 static const char *rangercmd[] = { "alacritty", "--command", "ranger", NULL };
 static const char *explorecmd[] = { "nautilus", NULL };
+static const char scratchpadname[] = "scratchpad";
+static const char *scratchpadcmd[] = { "alacritty", "-t", scratchpadname, /* "-o", "window.dimensions.columns=120", */ NULL };
 
+#include "./patches/shiftview.c"
 static Key keys[] = {
 	/* modifier                     key        function        argument */
 	{ MODKEY,                       XK_space,  spawn,          {.v = dmenucmd } },
@@ -70,14 +94,33 @@ static Key keys[] = {
 	{ MODKEY,                       XK_w,      spawn,          {.v = browsercmd } },
 	{ MODKEY,                       XK_r,      spawn,          {.v = rangercmd } },
 	{ MODKEY,                       XK_e,      spawn,          {.v = explorecmd } },
+	{ MODKEY,                       XK_grave,  togglescratch,  {.v = scratchpadcmd } },
 	{ MODKEY,                       XK_b,      togglebar,      {0} },
+	{ MODKEY|ShiftMask,             XK_j,      rotatestack,    {.i = +1 } },
+	{ MODKEY|ShiftMask,             XK_k,      rotatestack,    {.i = -1 } },
 	{ MODKEY,                       XK_j,      focusstack,     {.i = +1 } },
 	{ MODKEY,                       XK_k,      focusstack,     {.i = -1 } },
 	{ MODKEY,                       XK_i,      incnmaster,     {.i = +1 } },
 	{ MODKEY,                       XK_d,      incnmaster,     {.i = -1 } },
-	{ MODKEY,                       XK_h,      setmfact,       {.f = -0.05} },
-	{ MODKEY,                       XK_l,      setmfact,       {.f = +0.05} },
+	{ MODKEY_ALT,                   XK_h,      setmfact,       {.f = -0.05} },
+	{ MODKEY_ALT,                   XK_l,      setmfact,       {.f = +0.05} },
 	{ MODKEY|ShiftMask,             XK_Return, zoom,           {0} },
+	// { MODKEY|Mod4Mask,              XK_h,      incrgaps,       {.i = +1 } },
+	// { MODKEY|Mod4Mask,              XK_l,      incrgaps,       {.i = -1 } },
+	// { MODKEY|Mod4Mask|ShiftMask,    XK_h,      incrogaps,      {.i = +1 } },
+	// { MODKEY|Mod4Mask|ShiftMask,    XK_l,      incrogaps,      {.i = -1 } },
+	// { MODKEY|Mod4Mask|ControlMask,  XK_h,      incrigaps,      {.i = +1 } },
+	// { MODKEY|Mod4Mask|ControlMask,  XK_l,      incrigaps,      {.i = -1 } },
+	// { MODKEY|Mod4Mask,              XK_0,      togglegaps,     {0} },
+	// { MODKEY|Mod4Mask|ShiftMask,    XK_0,      defaultgaps,    {0} },
+	// { MODKEY,                       XK_y,      incrihgaps,     {.i = +1 } },
+	// { MODKEY,                       XK_o,      incrihgaps,     {.i = -1 } },
+	// { MODKEY|ControlMask,           XK_y,      incrivgaps,     {.i = +1 } },
+	// { MODKEY|ControlMask,           XK_o,      incrivgaps,     {.i = -1 } },
+	// { MODKEY|Mod4Mask,              XK_y,      incrohgaps,     {.i = +1 } },
+	// { MODKEY|Mod4Mask,              XK_o,      incrohgaps,     {.i = -1 } },
+	// { MODKEY|ShiftMask,             XK_y,      incrovgaps,     {.i = +1 } },
+	// { MODKEY|ShiftMask,             XK_o,      incrovgaps,     {.i = -1 } },
 	{ MODKEY,                       XK_Tab,    view,           {0} },
 	{ MODKEY,                       XK_q,      killclient,     {0} },
 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
@@ -90,6 +133,8 @@ static Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_0,      tag,            {.ui = ~0 } },
 	{ MODKEY,                       XK_comma,  focusmon,       {.i = -1 } },
 	{ MODKEY,                       XK_period, focusmon,       {.i = +1 } },
+	{ MODKEY,                       XK_l,      shiftview,      {.i = +1 } },
+	{ MODKEY,                       XK_h,      shiftview,      {.i = -1 } },
 	{ MODKEY|ShiftMask,             XK_comma,  tagmon,         {.i = -1 } },
 	{ MODKEY|ShiftMask,             XK_period, tagmon,         {.i = +1 } },
 	TAGKEYS(                        XK_1,                      0)
